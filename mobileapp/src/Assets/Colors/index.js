@@ -3,7 +3,7 @@ export const COLORS = {
   grey: '#a5a3a3',
   greyOld: '#676767',
   red: '#e04f5f',
-  primary: '#3fa0f1',
+  primary: '#1b2157',
   success: '#32ba7c',
   yellow: '#eee630',
   black: '#000000',

@@ -8,13 +8,16 @@ import {
   TouchableOpacity,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
 } from 'react-native';
 import React, {useState} from 'react';
 import {COLORS, IlLogoInspektorat} from '../../Assets';
-import {IonIcon} from '../../Components';
+import {IonIcon, LoadingComponent, ModalSuccess} from '../../Components';
+import {useDispatch, useSelector} from 'react-redux';
+import {LoginApp} from '../../Features/authSlice';
+import {setItem} from '../../Utils';
 
 const LoginScreen = ({navigation}) => {
+  const [isVisible, setIsVisible] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
@@ -24,14 +27,28 @@ const LoginScreen = ({navigation}) => {
     username: '',
     password: '',
   });
+  const dispatch = useDispatch();
+  const {isLoading} = useSelector(state => state.auth);
 
-  const HandleLogin = () => {
+  const HandleLogin = async () => {
     if (formData.username === '')
       return setFormError({username: 'Username tidak boleh kosong!'});
     if (formData.password === '')
       return setFormError({password: 'Password tidak boleh kosong!'});
-
-    navigation.replace('Home');
+    try {
+      const response = await dispatch(LoginApp({...formData}));
+      if (response.payload.status === 400) {
+        if (response.payload.data.error === 'username')
+          return setFormError({username: response.payload.data.message});
+        if (response.payload.data.error === 'password')
+          return setFormError({password: response.payload.data.message});
+      } else {
+        await setItem('profile', response.payload.data);
+        setIsVisible(!isVisible);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -47,7 +64,7 @@ const LoginScreen = ({navigation}) => {
             <View style={styles.body}>
               <Text style={styles.textBold}>LOGIN</Text>
               <Text style={styles.textNormal}>
-                Selamat datang di Aplikasi Absensi Inspektorat Sulawesi Tengah!
+                Selamat datang di Aplikasi SIBENSI Inspektorat Sulawesi Tengah!
               </Text>
             </View>
           </View>
@@ -95,6 +112,10 @@ const LoginScreen = ({navigation}) => {
                     maxLength={20}
                     keyboardType="ascii-capable"
                     secureTextEntry={!showPassword}
+                    value={formData.password}
+                    onChangeText={text =>
+                      setFormData({...formData, password: text})
+                    }
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
@@ -121,6 +142,18 @@ const LoginScreen = ({navigation}) => {
           <Text style={styles.textButton}>LOGIN</Text>
         </TouchableOpacity>
       </KeyboardAvoidingView>
+
+      {isLoading && <LoadingComponent />}
+      {isVisible && (
+        <ModalSuccess
+          isVisible={isVisible}
+          onClick={() => {
+            setIsVisible(false);
+            navigation.replace('Main');
+          }}
+          text={'Anda berhasil login!'}
+        />
+      )}
     </SafeAreaView>
   );
 };
