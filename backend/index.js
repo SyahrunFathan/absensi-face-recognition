@@ -4,7 +4,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const db = require("./configs/Database");
 const fileUpload = require("express-fileupload");
-// const ModelCreate = require("./models/ModelUser");
+// const ModelCreate = require("./models/ModelAbsensi");
 const path = require("path");
 
 const RouteUser = require("./routers/RouteUser");
@@ -15,7 +15,7 @@ const app = express();
 try {
   db.authenticate();
   console.log("Database connected....");
-  //   ModelCreate.sync();
+  // ModelCreate.sync();
 } catch (error) {
   console.log(error);
 }
