@@ -2,6 +2,10 @@ const ModelUser = require("../models/ModelUser");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const path = require("path");
+const ModelAbsensi = require("../models/ModelAbsensi");
+const moment = require("moment");
+const { Op } = require("sequelize");
+const ModelSetting = require("../models/ModelSetting");
 
 module.exports = {
   createUser: async (req, res) => {
@@ -210,6 +214,132 @@ module.exports = {
       res.clearCookie("token");
 
       return res.sendStatus(200);
+    } catch (error) {
+      return res.status(500).json({ error });
+    }
+  },
+  getUserLogin: async (req, res) => {
+    try {
+      const currentMonthStart = moment().startOf("month").toDate();
+      const currentMonthEnd = moment().endOf("month").toDate();
+      const tanggalHariIni = moment().format("YYYY-MM-DD");
+
+      const response = await ModelUser.findOne({
+        where: {
+          id_user: req.params.id,
+        },
+      });
+
+      const izin = await ModelAbsensi.count({
+        where: {
+          user_id: req.params.id,
+          status_kehadiran: "Izin",
+          tanggal_absensi: {
+            [Op.between]: [currentMonthStart, currentMonthEnd],
+          },
+          status_absensi: 2,
+        },
+      });
+
+      const hadir = await ModelAbsensi.count({
+        where: {
+          user_id: req.params.id,
+          status_kehadiran: "Hadir",
+          tanggal_absensi: {
+            [Op.between]: [currentMonthStart, currentMonthEnd],
+          },
+          status_absensi: 2,
+        },
+      });
+
+      const sakit = await ModelAbsensi.count({
+        where: {
+          user_id: req.params.id,
+          status_kehadiran: "Sakit",
+          tanggal_absensi: {
+            [Op.between]: [currentMonthStart, currentMonthEnd],
+          },
+          status_absensi: 2,
+        },
+      });
+
+      const attendance = await ModelAbsensi.findAll({
+        where: {
+          tanggal_absensi: tanggalHariIni,
+          user_id: {
+            [Op.ne]: req.params.id,
+          },
+          status_kehadiran: "Hadir",
+          status_absensi: 1,
+        },
+        include: {
+          model: ModelUser,
+          as: "user",
+          foreignKey: "user_id",
+        },
+        order: [["jam_absensi", "ASC"]],
+      });
+
+      const jamAbsen = await ModelSetting.findOne({
+        where: {
+          id_setting: 1,
+        },
+      });
+
+      return res
+        .status(200)
+        .json({ response, izin, hadir, sakit, attendance, jamAbsen });
+    } catch (error) {
+      return res.status(500).json({ error });
+    }
+  },
+  changePassword: async (req, res) => {
+    try {
+      const { passwordOld, password, passwordConfirm } = req.body;
+      const ambilDataUser = await ModelUser.findOne({
+        where: {
+          id_user: req.params.id,
+        },
+      });
+      const checkPassword = await bcrypt.compare(
+        passwordOld,
+        ambilDataUser.password
+      );
+
+      if (!checkPassword)
+        return res
+          .status(400)
+          .json({ message: "Password anda salah!", error: "passwordOld" });
+
+      const validationPassword =
+        /^(?=.*[A-Za-z])(?=.*\d)(?=.*[@$!%*#?&])[A-Za-z\d@$!%*#?&]{8,}$/;
+      if (!validationPassword.test(password))
+        return res.status(400).json({
+          message:
+            "Password setidaknya memiliki 1 angka, 1 karakter khusus, 1 huruf besar, dan 1 huruf kecil!",
+          error: "password",
+        });
+
+      if (passwordConfirm !== password)
+        return res
+          .status(400)
+          .json({ message: "Password tidak cocok!", error: "passwordConfirm" });
+
+      const salt = await bcrypt.genSalt();
+      const hashPassword = await bcrypt.hash(passwordConfirm, salt);
+
+      await ModelUser.update(
+        {
+          password: hashPassword,
+        },
+        {
+          where: {
+            id_user: req.params.id,
+          },
+        }
+      );
+
+      return res.status(200).json({ message: "Password berhasil di ubah!" });
     } catch (error) {
       return res.status(500).json({ error });
     }

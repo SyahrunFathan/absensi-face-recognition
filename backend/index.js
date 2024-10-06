@@ -4,10 +4,13 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const db = require("./configs/Database");
 const fileUpload = require("express-fileupload");
-// const ModelCreate = require("./models/ModelAbsensi");
+// const ModelCreate = require("./models/ModelSetting");
 const path = require("path");
 
 const RouteUser = require("./routers/RouteUser");
+const RouteFace = require("./routers/RouteFace");
+const RouteAbsensi = require("./routers/RouteAbsensi");
+
 dotenv.config();
 
 const app = express();
@@ -26,6 +29,8 @@ app.use(cors({ credentials: true }));
 app.use(fileUpload());
 
 app.use("/user", RouteUser);
+app.use("/face", RouteFace);
+app.use("/absensi", RouteAbsensi);
 
 app.use("/public", express.static(path.join(__dirname, "public")));
 

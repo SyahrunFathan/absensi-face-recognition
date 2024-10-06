@@ -22,6 +22,9 @@ const ModelAbsensi = db.define(
     status_absensi: {
       type: DataTypes.INTEGER,
     },
+    status_kehadiran: {
+      type: DataTypes.ENUM("Hadir", "Izin", "Sakit", "Alpa"),
+    },
   },
   {
     freezeTableName: true,
